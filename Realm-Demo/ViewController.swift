@@ -9,16 +9,19 @@
 import UIKit
 import RealmSwift
 
+
 class ViewController: UIViewController {
     @IBOutlet weak var tableView: UITableView!
     @IBOutlet weak var textField: UITextField!
     
-    var names: Results<ExampleData>? //ExampleData là class chứa object tạo lúc đầu nha
-    let real = try! Realm()
+    var names: Results<ExampleData>! // ExampleObject is class in SampleData.swift
+    let realm = try! Realm()
     
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view.
+        //        print(realm.configuration.fileURL!.deletingLastPathComponent().path)
+        
         print(Realm.Configuration.defaultConfiguration.fileURL!)
         
         tableView.delegate = self
@@ -26,40 +29,40 @@ class ViewController: UIViewController {
         
         loadPeople()
     }
-
-    @IBAction func addPeopleTapped(_ sender: Any) {
-        
-        let newName = ExampleData()
-        
-        newName.name = textField.text!
-        
-        do {
-            try real.write {
-                real.add(newName)
-            }
-            loadPeople()
-        } catch {
-            print("Error add data")
-        }
-        
-        textField.text = ""
-    }
     
+    // MARK: Get
     func loadPeople() {
-        names = real.objects(ExampleData.self)
+        names = realm.objects(ExampleData.self)
         tableView.reloadData()
     }
+    
+    // MARK: Post
+    @IBAction func addPeopleTapped(_ sender: Any) {
+        
+        if textField.text != "" {
+            let object = ExampleData()
+            object.name = textField.text!
+            
+            try! realm.write {
+                realm.add(object)
+                loadPeople()
+                textField.text = ""
+            }
+        }
+    }
+
+    
 }
 
 extension ViewController: UITableViewDataSource {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return names?.count ?? 1
+        return names.count
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "cell", for: indexPath)
         
-        cell.textLabel?.text = names?[indexPath.row].name ?? "No name added yet."
+        cell.textLabel?.text = names[indexPath.row].name
         
         return cell
     }
@@ -67,26 +70,22 @@ extension ViewController: UITableViewDataSource {
 
 extension ViewController: UITableViewDelegate {
     
+    // MARK: Put
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         
         var updateTextField = UITextField()
-        let alert = UIAlertController(title: "Update People", message: "", preferredStyle: .alert)
+        let alert = UIAlertController(title: "Update people", message: "", preferredStyle: .alert)
         
         alert.addTextField { (alertTextField) in
-            alertTextField.placeholder = "Enter Name You Want To Update"
+            alertTextField.placeholder = "Enter name you want to update"
             updateTextField = alertTextField
         }
         
-        let action = UIAlertAction(title: "Update People", style: .default) { (action) in
-            if let name = self.names?[indexPath.row]
-            {
-                do {
-                    try self.real.write {
+        let action = UIAlertAction(title: "Update people", style: .default) { (action) in
+            if let name = self.names?[indexPath.row] {
+                try! self.realm.write {
                     name.name = updateTextField.text!
                     self.loadPeople()
-                    }
-                } catch {
-                    print("Error")
                 }
             }
         }
@@ -97,5 +96,16 @@ extension ViewController: UITableViewDelegate {
         
         present(alert, animated: true, completion: nil)
         
+        
+    }
+    
+    // MARK: Delete
+    func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
+        if editingStyle == .delete {
+            try! realm.write {
+                self.realm.delete(names[indexPath.row])
+                self.loadPeople()
+            }
+        }
     }
 }

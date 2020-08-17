@@ -6,7 +6,6 @@
 //  Copyright © 2020 nhn. All rights reserved.
 //
 
-import Foundation
 import RealmSwift
 
 class ExampleData: Object {
